@@ -129,6 +129,7 @@
     <string name="chat_add_attachment_or_tool">添加附件或工具</string>
     <string name="chat_photos">照片</string>
     <string name="chat_files">文件</string>
+    <string name="chat_alpine_terminal">Alpine Linux 终端</string>
     <string name="chat_analyze_image_chip">分析图片</string>
     <string name="chat_code_chip">代码</string>
     <string name="chat_help_me_write_chip">帮我写</string>

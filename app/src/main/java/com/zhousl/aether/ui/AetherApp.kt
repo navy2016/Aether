@@ -169,6 +169,7 @@ private const val PrivacyPolicyAnnotationTag = "privacy_policy"
 private fun AppScreen.depth(): Int = when (this) {
     AppScreen.Onboarding -> 0
     AppScreen.Chat -> 1
+    AppScreen.AlpineTerminal -> 2
     AppScreen.Settings -> 2
 }
 
@@ -301,6 +302,9 @@ fun AetherApp(
         }
     }
 
+    if (uiState.currentScreen == AppScreen.AlpineTerminal) {
+        BackHandler(onBack = viewModel::closeAlpineTerminal)
+    }
     LaunchedEffect(uiState.currentScreen) {
         if (uiState.currentScreen == AppScreen.Settings) {
             viewModel.refreshUsageStatisticsSnapshots()
@@ -874,6 +878,7 @@ private fun AetherAppContent(
                         )
                     },
                     onPickFiles = { filePicker.launch("*/*") },
+                    onOpenAlpineTerminal = viewModel::openAlpineTerminal,
                     onSaveAttachment = { attachment ->
                         pendingSaveTarget = PendingSaveTarget.Attachment(attachment)
                         saveAttachmentLauncher.launch(attachment.name)
@@ -933,6 +938,11 @@ private fun AetherAppContent(
                             isSending = isCurrentSessionRunning,
                         )
                     }
+
+                    AppScreen.AlpineTerminal -> AlpineTerminalScreen(
+                        createLaunchSpec = viewModel::createAlpineTerminalLaunchSpec,
+                        onBack = viewModel::closeAlpineTerminal,
+                    )
 
                     AppScreen.Settings -> AetherExtensionComponentHost(
                         target = AetherExtensionComponentSettingsScreen,

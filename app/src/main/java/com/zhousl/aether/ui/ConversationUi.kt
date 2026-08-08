@@ -346,6 +346,7 @@ fun ConversationScreen(
     onNewChat: () -> Unit,
     onPickImages: () -> Unit,
     onPickFiles: () -> Unit,
+    onOpenAlpineTerminal: () -> Unit,
     onSaveAttachment: (ChatAttachment) -> Unit,
     onOpenLink: (String) -> Unit,
     onEditMessage: (String) -> Unit,
@@ -778,6 +779,7 @@ fun ConversationScreen(
                 onCancelEdit = onCancelEdit,
                 onPickImages = onPickImages,
                 onPickFiles = onPickFiles,
+                onOpenAlpineTerminal = onOpenAlpineTerminal,
                 onRequestTermuxPermission = onRequestTermuxPermission,
                 onOpenAppPermissions = onOpenAppPermissions,
                 onOpenTermuxSettings = onOpenTermuxSettings,
@@ -2106,6 +2108,7 @@ private fun ConversationComposerOverlay(
     onCancelEdit: () -> Unit,
     onPickImages: () -> Unit,
     onPickFiles: () -> Unit,
+    onOpenAlpineTerminal: () -> Unit,
     onRequestTermuxPermission: () -> Unit,
     onOpenAppPermissions: () -> Unit,
     onOpenTermuxSettings: () -> Unit,
@@ -2172,6 +2175,7 @@ private fun ConversationComposerOverlay(
                     onCancelEdit = onCancelEdit,
                     onPickImages = onPickImages,
                     onPickFiles = onPickFiles,
+                    onOpenAlpineTerminal = onOpenAlpineTerminal,
                     onRequestTermuxPermission = onRequestTermuxPermission,
                     onOpenAppPermissions = onOpenAppPermissions,
                     onOpenTermuxSettings = onOpenTermuxSettings,
@@ -2221,6 +2225,7 @@ private fun ConversationComposerBar(
     onCancelEdit: () -> Unit,
     onPickImages: () -> Unit,
     onPickFiles: () -> Unit,
+    onOpenAlpineTerminal: () -> Unit,
     onRequestTermuxPermission: () -> Unit,
     onOpenAppPermissions: () -> Unit,
     onOpenTermuxSettings: () -> Unit,
@@ -2717,6 +2722,15 @@ private fun ConversationComposerBar(
                                         iconContainerColor = AetherSurfaceHigh,
                                         onClick = {
                                             runAfterAttachmentMenuDismiss(onPickFiles)
+                                        },
+                                    )
+                                    ComposerPlusMenuRow(
+                                        title = stringResource(R.string.chat_alpine_terminal),
+                                        icon = Icons.Rounded.Terminal,
+                                        iconTint = Color(0xFF2F6DA3),
+                                        iconContainerColor = AetherSurfaceHigh,
+                                        onClick = {
+                                            runAfterAttachmentMenuDismiss(onOpenAlpineTerminal)
                                         },
                                     )
                                     if (agentModeAvailable || chromeAvailable || availableSkills.isNotEmpty() || availableMcpServers.isNotEmpty()) {

@@ -129,6 +129,7 @@
     <string name="chat_add_attachment_or_tool">Add attachment or tool</string>
     <string name="chat_photos">Photos</string>
     <string name="chat_files">Files</string>
+    <string name="chat_alpine_terminal">Alpine Linux</string>
     <string name="chat_analyze_image_chip">Analyze image</string>
     <string name="chat_code_chip">Code</string>
     <string name="chat_help_me_write_chip">Help me write</string>

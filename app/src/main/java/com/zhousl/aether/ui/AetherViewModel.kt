@@ -1521,6 +1521,14 @@ class AetherViewModel(
         _uiState.update { it.copy(currentScreen = AppScreen.Settings) }
     }
 
+    fun openAlpineTerminal() {
+        _uiState.update { it.copy(currentScreen = AppScreen.AlpineTerminal) }
+    }
+
+    fun closeAlpineTerminal() {
+        _uiState.update { it.copy(currentScreen = AppScreen.Chat) }
+    }
+
     fun refreshUsageStatisticsSnapshots() {
         viewModelScope.launch {
             val snapshots = withContext(Dispatchers.IO) {
