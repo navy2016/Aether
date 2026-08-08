@@ -26,6 +26,7 @@ internal const val DraftSessionId = "draft"
 enum class AppScreen {
     Onboarding,
     Chat,
+    AlpineTerminal,
     Settings,
 }
 
