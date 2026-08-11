@@ -2710,8 +2710,15 @@ fun AetherSharedApp(
                         }
                     },
                     onReasoningSelected = { effort ->
-                        sharedAppSettings = sharedAppSettings.copy(reasoningEffort = effort)
-                        appScope.launch { settingsStore?.saveGeneralSettings(sharedAppSettings) }
+                        appScope.launch {
+                            if (!currentSession.isDraft && !currentSession.isWorking) {
+                                runSharedAppCatching {
+                                    bridgeClient.setThinkingLevel(currentSession.id, effort)
+                                }
+                            }
+                            sharedAppSettings = sharedAppSettings.copy(reasoningEffort = effort)
+                            settingsStore?.saveGeneralSettings(sharedAppSettings)
+                        }
                     },
                     onExtensionSlashCommand = { command, args, raw ->
                         appScope.launch {
@@ -6047,19 +6054,13 @@ private fun SharedComposer(
                                                         commands = availableSlashCommands,
                                                     )?.let { (suggestion, parsed) ->
                                                         if (suggestion.command.equals("/thinking", ignoreCase = true)) {
-                                                            val nextLevel = nextThinkingLevel(
-                                                                current = reasoningEffort,
-                                                                supportedLevels = currentSupportedThinkingLevels,
-                                                                clamps = currentThinkingLevelClamps,
+                                                            onReasoningSelected(
+                                                                nextThinkingLevel(
+                                                                    current = reasoningEffort,
+                                                                    supportedLevels = currentSupportedThinkingLevels,
+                                                                    clamps = currentThinkingLevelClamps,
+                                                                )
                                                             )
-                                                            scope.launch {
-                                                                if (!composerState.isDraft) {
-                                                                    runSharedAppCatching {
-                                                                        bridgeClient.setThinkingLevel(composerState.id, nextLevel)
-                                                                    }
-                                                                }
-                                                                onReasoningSelected(nextLevel)
-                                                            }
                                                             onValueChange("")
                                                             return@SharedComposerSubmitButton
                                                         }
