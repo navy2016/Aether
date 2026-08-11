@@ -148,6 +148,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -885,6 +886,7 @@ private fun AetherAppContent(
                     reasoningEffort = uiState.settings.reasoningEffort,
                     thinkingLevelsByProviderModel = uiState.thinkingLevelsByProviderModel,
                     thinkingLevelClampsByProviderModel = uiState.thinkingLevelClampsByProviderModel,
+                    extensionSlashCommands = extensionState.snapshot.slashCommands,
                     availableSkills = uiState.installedSkills.filter { it.isEnabled },
                     availableMcpServers = uiState.mcpServers.filter { it.isEnabled },
                     selectedSkillIds = selectedSkillIds,
@@ -909,6 +911,20 @@ private fun AetherAppContent(
                     onModelSelected = viewModel::setCurrentChatModelSelectionAndResolveThinkingLevels,
                     onModelSelectorOpened = viewModel::refreshCurrentChatThinkingLevels,
                     onReasoningEffortSelected = viewModel::setReasoningEffort,
+                    onExtensionSlashCommand = { command, args, raw ->
+                        scope.launch {
+                            extensionManager.invokeAction(
+                                extensionId = command.extensionId,
+                                action = command.action,
+                                args = JSONObject(command.args.toString())
+                                    .put("command", command.command)
+                                    .put("name", command.name)
+                                    .put("args", args)
+                                    .put("raw", raw),
+                                context = extensionContext,
+                            )
+                        }
+                    },
                     onRemoveDraftAttachment = viewModel::removeDraftAttachment,
                     onSetSkillSelected = viewModel::setComposerSkillSelected,
                     onSetMcpServerSelected = viewModel::setComposerMcpServerSelected,

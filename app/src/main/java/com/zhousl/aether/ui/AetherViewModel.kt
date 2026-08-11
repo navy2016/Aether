@@ -2394,9 +2394,18 @@ class AetherViewModel(
     }
 
     fun setReasoningEffort(effort: String) {
+        val normalized = normalizeReasoningEffort(effort)
+        val snapshot = _uiState.value
+        val sessionId = snapshot.currentSessionId
         viewModelScope.launch {
+            if (
+                sessionId != DraftSessionId &&
+                snapshot.sessionExecutionStates[sessionId]?.isRunning != true
+            ) {
+                runCatching { runtime.piKernelBridge.setThinkingLevel(sessionId, normalized) }
+            }
             settingsRepository.updateSettings(
-                _uiState.value.settings.copy(reasoningEffort = normalizeReasoningEffort(effort)),
+                _uiState.value.settings.copy(reasoningEffort = normalized),
             )
         }
     }

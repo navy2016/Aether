@@ -166,6 +166,19 @@ class SharedPiBridgeClient(
         abortOnCancellation = false,
     )
 
+    suspend fun setThinkingLevel(
+        sessionId: String,
+        reasoning: String,
+    ): JsonObject = request(
+        type = "set_thinking_level",
+        payload = buildJsonObject {
+            put("session_id", sessionId)
+            put("reasoning", reasoning)
+        },
+        timeoutMillis = 30_000,
+        abortOnCancellation = false,
+    )
+
     suspend fun navigateSession(
         sessionId: String,
         entryId: String,

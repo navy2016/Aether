@@ -250,6 +250,18 @@ class PiKernelBridge(
             startIfNeeded = deleteFile,
         )
 
+    suspend fun setThinkingLevel(
+        sessionId: String,
+        reasoning: String,
+    ): JSONObject = request(
+        type = "set_thinking_level",
+        payload = JSONObject()
+            .put("session_id", sessionId)
+            .put("reasoning", reasoning),
+        timeoutMillis = PiBridgePingTimeoutMillis,
+        abortOnCancellation = false,
+    )
+
     suspend fun listExtensions(sessionId: String): JSONObject =
         request(
             type = "list_extensions",

@@ -98,6 +98,15 @@ export interface AetherComposerMenuItemDefinition {
   selected?: boolean;
 }
 
+export interface AetherSlashCommandDefinition {
+  name: string;
+  description?: string;
+  argumentHint?: string;
+  order?: number;
+  action?: string;
+  args?: AetherJsonObject;
+}
+
 export interface AetherMessageTypeDefinition {
   type: string;
   title?: string;
@@ -243,6 +252,8 @@ export interface AetherExtensionAPI {
   registerSettingsPage(definition: AetherSettingsDefinition): () => void;
   registerComposerMenuItem(definition: AetherComposerMenuItemDefinition): () => void;
   registerComposerMenu(definition: AetherComposerMenuItemDefinition): () => void;
+  registerSlashCommand(definition: AetherSlashCommandDefinition): () => void;
+  registerCommand(definition: AetherSlashCommandDefinition): () => void;
   registerMessageType(definition: AetherMessageTypeDefinition): () => void;
   registerCustomMessage(definition: AetherMessageTypeDefinition): () => void;
   registerAction(

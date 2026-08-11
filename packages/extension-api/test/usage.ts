@@ -22,6 +22,13 @@ const factory = defineAetherExtension((aether) => {
     sections: [{ settings: [{ id: "enabled", label: "Enabled", type: "toggle", default: true }] }],
   });
   aether.registerComposerMenuItem({ id: "run", title: "Run", action: "run" });
+  aether.registerSlashCommand({
+    name: "demo",
+    description: "Run the demo action",
+    argumentHint: "[text]",
+    action: "run",
+  });
+  aether.registerCommand({ name: "demo-alias", action: "run" });
   aether.registerMessageType({ type: "demo", render: ({ message }) => ui.text(String(message.text ?? "")) });
   aether.registerAction("message", () => aether.messages.append("demo", { text: "hello" }));
 });
