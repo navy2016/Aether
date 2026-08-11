@@ -148,7 +148,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -319,6 +318,9 @@ fun AetherApp(
                             uiState = uiState,
                             language = effectiveLanguage,
                             nativeModState = nativeModState,
+                            extensionManager = extensionManager,
+                            extensionState = extensionState,
+                            extensionContext = extensionContext,
                             onNotificationPermissionRequested = onNotificationPermissionRequested,
                             drawerOpenedEventRegistered =
                                 "drawer.opened" in extensionState.snapshot.eventNames,
@@ -411,6 +413,9 @@ private fun AetherAppContent(
     uiState: AetherUiState,
     language: AppLanguage,
     nativeModState: AetherNativeModState,
+    extensionManager: com.zhousl.aether.data.AetherAppExtensionManager,
+    extensionState: com.zhousl.aether.data.AetherAppExtensionState,
+    extensionContext: JSONObject,
     onNotificationPermissionRequested: () -> Unit,
     drawerOpenedEventRegistered: Boolean,
     onDrawerOpened: () -> Unit,
