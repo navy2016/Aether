@@ -6,9 +6,10 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 
-/** The only Pi built-in command exposed by Aether's non-TUI composer. */
+/** Pi built-ins exposed by Aether's non-TUI composer. */
 val PiBuiltinSlashCommands = listOf(
-    "compact" to "Manually compact the session context",
+    SlashCommandSuggestion("/compact", "Manually compact the session context"),
+    SlashCommandSuggestion("/thinking", "Cycle thinking: off, low, medium, high, xhigh"),
 )
 
 data class SlashCommandSuggestion(
@@ -16,6 +17,9 @@ data class SlashCommandSuggestion(
     val description: String,
     val icon: SlashCommandIcon = SlashCommandIcon.Command,
     val argumentHint: String = "",
+    val extensionId: String = "",
+    val action: String = "",
+    val actionArgs: Map<String, String> = emptyMap(),
 )
 
 enum class SlashCommandIcon { Command, Skill, Extension }
@@ -26,18 +30,71 @@ fun slashCommandSuggestions(
 ): List<SlashCommandSuggestion> {
     if (input.isEmpty() || input.first() != '/') return emptyList()
     val commandToken = input.drop(1).takeWhile { !it.isWhitespace() }
-    val exactCommand = PiBuiltinSlashCommands.any { it.first.equals(commandToken, ignoreCase = true) }
+    val allCommands = PiBuiltinSlashCommands + extensionCommands.map {
+        it.copy(
+            command = "/${it.command.removePrefix("/")}",
+            icon = SlashCommandIcon.Extension,
+        )
+    }
+    val exactCommand = allCommands.any {
+        it.command.removePrefix("/").equals(commandToken, ignoreCase = true)
+    }
     if (input.drop(1 + commandToken.length).trimStart().isNotEmpty() && exactCommand) return emptyList()
     val prefix = commandToken.lowercase()
-    return (PiBuiltinSlashCommands.map { (name, description) ->
-        SlashCommandSuggestion("/$name", description)
-    } + extensionCommands.map { it.copy(icon = SlashCommandIcon.Extension) })
+    return allCommands
         .filter {
             val candidate = it.command.removePrefix("/").lowercase()
             candidate.startsWith(prefix) || prefix.startsWith(candidate)
         }
         .distinctBy { it.command.lowercase() }
         .take(50)
+}
+
+data class ParsedSlashCommand(
+    val name: String,
+    val args: String,
+    val raw: String,
+)
+
+fun parseSlashCommand(input: String): ParsedSlashCommand? {
+    val raw = input.trim()
+    if (!raw.startsWith('/')) return null
+    val body = raw.drop(1)
+    val name = body.takeWhile { !it.isWhitespace() }.trim()
+    if (name.isEmpty()) return null
+    return ParsedSlashCommand(
+        name = name,
+        args = body.drop(name.length).trimStart(),
+        raw = raw,
+    )
+}
+
+fun findSlashCommand(
+    input: String,
+    commands: List<SlashCommandSuggestion>,
+): Pair<SlashCommandSuggestion, ParsedSlashCommand>? {
+    val parsed = parseSlashCommand(input) ?: return null
+    val command = commands.firstOrNull {
+        it.command.removePrefix("/").equals(parsed.name, ignoreCase = true)
+    } ?: return null
+    return command to parsed
+}
+
+private val ThinkingCycle = listOf("off", "low", "medium", "high", "xhigh")
+
+fun nextThinkingLevel(
+    current: String,
+    supportedLevels: List<String> = emptyList(),
+    clamps: Map<String, String> = emptyMap(),
+): String {
+    val allowed = ThinkingCycle
+        .map { clamps[it] ?: it }
+        .filter { supportedLevels.isEmpty() || it in supportedLevels }
+        .distinct()
+        .ifEmpty { listOf("off") }
+    val effectiveCurrent = clamps[current] ?: current
+    val currentIndex = allowed.indexOf(effectiveCurrent)
+    return allowed[(currentIndex + 1).mod(allowed.size)]
 }
 
 fun slashDisplayName(command: String): String = command.removePrefix("/")

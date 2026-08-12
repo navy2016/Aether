@@ -53,6 +53,11 @@ aether.registerComposerMenuItem({
   icon: "auto",
   action: "summarize",
 });
+aether.registerSlashCommand({
+  name: "summarize",
+  description: "Summarize the current thread",
+  action: "summarize",
+});
 aether.registerMessageType({
   type: "summary",
   title: "Summary",
@@ -65,8 +70,10 @@ aether.registerAction("show-summary", () =>
   aether.messages.append("summary", { title: "Done", body: "Thread summarized." }));
 ```
 
-This package intentionally contains declarations only. Aether injects the
-runtime implementation when it loads an Extension.
+Aether's non-TUI composer also exposes extension commands. Script Mods can
+register them with `registerSlashCommand()`; exact submitted matches invoke the
+registered action and pass parsed arguments.
+
 
 The npm package major version matches `aether.apiVersion`. Package `2.x`
 describes Script API version 2.

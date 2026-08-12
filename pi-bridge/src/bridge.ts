@@ -176,6 +176,7 @@ interface AgentSessionState {
   currentRequestId: string;
   toolArgsById: Map<string, unknown>;
   lastAccessedAt: number;
+  thinkingLevel: "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 }
 
 const activeAborters = new Map<string, () => void | Promise<unknown>>();
@@ -1965,6 +1966,7 @@ async function createNativeAgentSession(
     currentRequestId: "",
     toolArgsById: new Map<string, unknown>(),
     lastAccessedAt: Date.now(),
+    thinkingLevel: thinkingLevelFor(payload) ?? "off",
   } satisfies AgentSessionState;
   const customTools = [
     ...nativeToolDefinitions(state),
@@ -2069,6 +2071,7 @@ function nativeSessionPayload(state: AgentSessionState): JsonObject {
     is_idle: state.session.isIdle,
     is_streaming: state.session.isStreaming,
     is_compacting: state.session.isCompacting,
+    thinking_level: state.thinkingLevel,
     active_tools: state.session.getActiveToolNames(),
     tools: state.session.getAllTools().map((tool) => ({
       name: tool.name,
@@ -2094,6 +2097,17 @@ async function compactNativeAgentSession(id: string, payload: JsonObject): Promi
     activeAborters.delete(id);
     if (state.currentRequestId === id) state.currentRequestId = "";
   }
+}
+
+async function setNativeAgentThinkingLevel(payload: JsonObject): Promise<JsonObject> {
+  const state = nativeSessionFromPayload(payload);
+  if (!state.session.isIdle) throw new Error("Cannot change thinking level while a Pi AgentSession is busy.");
+  const requested = thinkingLevelFor(payload);
+  if (!requested) throw new Error("A valid reasoning level is required.");
+  const effective = clampThinkingLevel(state.model, requested);
+  state.session.setThinkingLevel(effective);
+  state.thinkingLevel = effective;
+  return { ...nativeSessionPayload(state), thinking_level: effective };
 }
 
 async function navigateNativeAgentSession(id: string, payload: JsonObject): Promise<JsonObject> {
@@ -2460,6 +2474,7 @@ function extensionRuntimePayload(state: AgentSessionState): JsonObject {
   return {
     session_id: state.sessionId,
     workspace_directory: state.workspaceDirectory,
+    thinking_level: state.thinkingLevel,
     extension_paths: runner.getExtensionPaths(),
     discovered_paths: loaded.extensions.map((extension) => extension.path),
     errors: loaded.errors,
@@ -2752,6 +2767,9 @@ async function handleRequest(request: BridgeRequest): Promise<void> {
       return;
     case "compact_session":
       writeResponse(id, await compactNativeAgentSession(id, payload));
+      return;
+    case "set_thinking_level":
+      writeResponse(id, await setNativeAgentThinkingLevel(payload));
       return;
     case "navigate_session":
       writeResponse(id, await navigateNativeAgentSession(id, payload));

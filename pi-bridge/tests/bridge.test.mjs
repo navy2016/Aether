@@ -261,6 +261,13 @@ export default defineAetherExtension((aether) => {
     }],
   });
   aether.registerComposerMenuItem({ id: "run", title: "Run demo", action: "run" });
+  aether.registerSlashCommand({
+    name: "demo",
+    description: "Run demo command",
+    argumentHint: "[text]",
+    action: "run",
+    args: { preset: "strict" },
+  });
   aether.registerMessageType({ type: "demo", render: ({ message }) => ui.text(String(message.text ?? "")) });
   aether.registerAction("list-skills", async () =>
     aether.services.invoke("skills", "list"));
@@ -289,6 +296,9 @@ export default defineAetherExtension((aether) => {
     assert.equal(loaded.snapshot.settings[0].sections[0].settings[0].id, "enabled");
     assert.equal(loaded.snapshot.settings[1].title, "Secondary");
     assert.equal(loaded.snapshot.composer_menu_items[0].title, "Run demo");
+    assert.equal(loaded.snapshot.slash_commands[0].command, "/demo");
+    assert.equal(loaded.snapshot.slash_commands[0].argument_hint, "[text]");
+    assert.equal(loaded.snapshot.slash_commands[0].args.preset, "strict");
     assert.equal(loaded.snapshot.message_types[0].type, "demo");
     assert.deepEqual(loaded.snapshot.event_names, ["before_send", "operation:chat.new"]);
 

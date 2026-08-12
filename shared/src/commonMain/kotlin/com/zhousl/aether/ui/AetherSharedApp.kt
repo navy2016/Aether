@@ -191,6 +191,7 @@ import com.zhousl.aether.data.SharedSkillManager
 import com.zhousl.aether.data.SharedInstalledSkill
 import com.zhousl.aether.data.generateSharedQuickActionLabel
 import com.zhousl.aether.data.SharedAetherExtensionManager
+import com.zhousl.aether.data.SharedAetherExtensionSlashCommand
 import com.zhousl.aether.data.SharedAetherExtensionSnapshot
 import com.zhousl.aether.data.SharedAetherExtensionSettingsPage
 import com.zhousl.aether.data.SharedExtensionStateStore
@@ -2683,6 +2684,7 @@ fun AetherSharedApp(
                     thinkingLevelsByProviderModel = thinkingLevelsByProviderModel,
                     thinkingLevelClampsByProviderModel = thinkingLevelClampsByProviderModel,
                     reasoningEffort = sharedAppSettings.reasoningEffort,
+                    extensionSlashCommands = extensionSnapshot.slashCommands,
                     onTransientMessage = { transientMessage = it },
                     onModelMenuOpened = {},
                     onModelSelected = { key, onResolved ->
@@ -2708,8 +2710,31 @@ fun AetherSharedApp(
                         }
                     },
                     onReasoningSelected = { effort ->
-                        sharedAppSettings = sharedAppSettings.copy(reasoningEffort = effort)
-                        appScope.launch { settingsStore?.saveGeneralSettings(sharedAppSettings) }
+                        appScope.launch {
+                            if (!currentSession.isDraft && !currentSession.isWorking) {
+                                runSharedAppCatching {
+                                    bridgeClient.setThinkingLevel(currentSession.id, effort)
+                                }
+                            }
+                            sharedAppSettings = sharedAppSettings.copy(reasoningEffort = effort)
+                            settingsStore?.saveGeneralSettings(sharedAppSettings)
+                        }
+                    },
+                    onExtensionSlashCommand = { command, args, raw ->
+                        appScope.launch {
+                            val updatedSnapshot = extensionManagerRef?.invokeAction(
+                                extensionId = command.extensionId,
+                                action = command.action,
+                                args = JsonObject(command.args + mapOf(
+                                    "command" to JsonPrimitive(command.command),
+                                    "name" to JsonPrimitive(command.name),
+                                    "args" to JsonPrimitive(args),
+                                    "raw" to JsonPrimitive(raw),
+                                )),
+                                context = extensionContext(),
+                            )
+                            if (updatedSnapshot != null) extensionSnapshot = updatedSnapshot
+                        }
                     },
                     editingMessageId = currentSession.editingMessageId,
                     showStarterPromptHint = showStarterPromptHint,
@@ -4422,10 +4447,12 @@ private fun SharedChatScreen(
     thinkingLevelsByProviderModel: Map<String, List<String>>,
     thinkingLevelClampsByProviderModel: Map<String, Map<String, String>>,
     reasoningEffort: String,
+    extensionSlashCommands: List<SharedAetherExtensionSlashCommand>,
     onTransientMessage: (String) -> Unit,
     onModelMenuOpened: () -> Unit,
     onModelSelected: (String, (Boolean) -> Unit) -> Unit,
     onReasoningSelected: (String) -> Unit,
+    onExtensionSlashCommand: (SharedAetherExtensionSlashCommand, String, String) -> Unit,
     editingMessageId: String,
     showStarterPromptHint: Boolean,
     onDismissStarterPromptHint: () -> Unit,
@@ -4912,6 +4939,14 @@ private fun SharedChatScreen(
                     composerState = composerState,
                     onValueChange = onInputChanged,
                     onSend = onSend,
+                    extensionSlashCommands = extensionSlashCommands,
+                    reasoningEffort = reasoningEffort,
+                    selectedModelKey = selectedModelKey,
+                    modelOptions = modelOptions,
+                    thinkingLevelsByProviderModel = thinkingLevelsByProviderModel,
+                    thinkingLevelClampsByProviderModel = thinkingLevelClampsByProviderModel,
+                    onReasoningSelected = onReasoningSelected,
+                    onExtensionSlashCommand = onExtensionSlashCommand,
                     isSending = isSending,
                     onStop = onStop,
                     onQueueFollowUp = onQueueFollowUp,
@@ -5553,6 +5588,14 @@ private fun SharedComposer(
     composerState: SharedSessionUiState,
     onValueChange: (String) -> Unit,
     onSend: (List<SharedChatAttachment>) -> Unit,
+    extensionSlashCommands: List<SharedAetherExtensionSlashCommand>,
+    reasoningEffort: String,
+    selectedModelKey: String,
+    modelOptions: List<ProviderModelOption>,
+    thinkingLevelsByProviderModel: Map<String, List<String>>,
+    thinkingLevelClampsByProviderModel: Map<String, Map<String, String>>,
+    onReasoningSelected: (String) -> Unit,
+    onExtensionSlashCommand: (SharedAetherExtensionSlashCommand, String, String) -> Unit,
     isSending: Boolean,
     onStop: () -> Unit,
     onQueueFollowUp: (List<SharedChatAttachment>) -> Unit,
@@ -5609,9 +5652,34 @@ private fun SharedComposer(
             stringResource(Res.string.chat_ask_with_selected_tools)
         else -> stringResource(Res.string.chat_ask_aether)
     }
-    val slashSuggestions = remember(fieldValue.text) {
-        slashCommandSuggestions(fieldValue.text)
+    val availableSlashCommands = remember(extensionSlashCommands) {
+        PiBuiltinSlashCommands + extensionSlashCommands.map { command ->
+            SlashCommandSuggestion(
+                command = command.command,
+                description = command.description,
+                argumentHint = command.argumentHint,
+                extensionId = command.extensionId,
+                action = command.action,
+                icon = SlashCommandIcon.Extension,
+            )
+        }
     }
+    val slashSuggestions = remember(fieldValue.text, availableSlashCommands) {
+        slashCommandSuggestions(
+            input = fieldValue.text,
+            extensionCommands = availableSlashCommands.filter { it.icon == SlashCommandIcon.Extension },
+        )
+    }
+    val selectedModel = modelOptions.firstOrNull { it.key == selectedModelKey }
+    val currentThinkingCatalogKey = selectedModel?.let {
+        sharedThinkingCatalogKey(it.piProviderId, it.modelId)
+    }
+    val currentSupportedThinkingLevels = currentThinkingCatalogKey
+        ?.let(thinkingLevelsByProviderModel::get)
+        .orEmpty()
+    val currentThinkingLevelClamps = currentThinkingCatalogKey
+        ?.let(thinkingLevelClampsByProviderModel::get)
+        .orEmpty()
     fun applySlashSuggestion(command: String) {
         val typedLength = fieldValue.text.drop(1).takeWhile { !it.isWhitespace() }.length
         val replaceEnd = (1 + typedLength).coerceAtMost(fieldValue.text.length)
@@ -5979,6 +6047,32 @@ private fun SharedComposer(
                                             onClick = {
                                                 if (!hasDraft || !canSendDraft) {
                                                     return@SharedComposerSubmitButton
+                                                }
+                                                if (!isSending && attachments.isEmpty()) {
+                                                    findSlashCommand(
+                                                        input = fieldValue.text,
+                                                        commands = availableSlashCommands,
+                                                    )?.let { (suggestion, parsed) ->
+                                                        if (suggestion.command.equals("/thinking", ignoreCase = true)) {
+                                                            onReasoningSelected(
+                                                                nextThinkingLevel(
+                                                                    current = reasoningEffort,
+                                                                    supportedLevels = currentSupportedThinkingLevels,
+                                                                    clamps = currentThinkingLevelClamps,
+                                                                )
+                                                            )
+                                                            onValueChange("")
+                                                            return@SharedComposerSubmitButton
+                                                        }
+                                                        extensionSlashCommands.firstOrNull {
+                                                            it.extensionId == suggestion.extensionId &&
+                                                                it.command.equals(suggestion.command, ignoreCase = true)
+                                                        }?.let { command ->
+                                                            onExtensionSlashCommand(command, parsed.args, parsed.raw)
+                                                            onValueChange("")
+                                                            return@SharedComposerSubmitButton
+                                                        }
+                                                    }
                                                 }
                                                 if (isSending) {
                                                     followUpMenuOpen = true

@@ -57,6 +57,19 @@ data class AetherAppExtensionComposerMenuItem(
     val selected: Boolean,
 )
 
+data class AetherAppExtensionSlashCommand(
+    val id: String,
+    val extensionId: String,
+    val extensionName: String,
+    val name: String,
+    val command: String,
+    val description: String,
+    val argumentHint: String,
+    val order: Int,
+    val action: String,
+    val args: JSONObject,
+)
+
 data class AetherAppExtensionSettingsPage(
     val id: String,
     val localId: String,
@@ -92,6 +105,7 @@ data class AetherAppExtensionSnapshot(
     val surfaces: List<AetherAppExtensionSurface> = emptyList(),
     val components: List<AetherAppExtensionComponent> = emptyList(),
     val composerMenuItems: List<AetherAppExtensionComposerMenuItem> = emptyList(),
+    val slashCommands: List<AetherAppExtensionSlashCommand> = emptyList(),
     val settings: List<AetherAppExtensionSettingsPage> = emptyList(),
     val messageTypes: List<AetherAppExtensionMessageType> = emptyList(),
     val eventNames: Set<String> = emptySet(),
@@ -500,6 +514,20 @@ internal fun parseAetherAppExtensionSnapshot(json: JSONObject?): AetherAppExtens
                 action = item.optString("action"),
                 args = item.optJSONObject("args") ?: JSONObject(),
                 selected = item.optBoolean("selected"),
+            )
+        },
+        slashCommands = json.optJSONArray("slash_commands").objects().map { item ->
+            AetherAppExtensionSlashCommand(
+                id = item.optString("id"),
+                extensionId = item.optString("extension_id"),
+                extensionName = item.optString("extension_name"),
+                name = item.optString("name"),
+                command = item.optString("command"),
+                description = item.optString("description"),
+                argumentHint = item.optString("argument_hint"),
+                order = item.optInt("order"),
+                action = item.optString("action"),
+                args = item.optJSONObject("args") ?: JSONObject(),
             )
         },
         settings = json.optJSONArray("settings").objects().map { item ->

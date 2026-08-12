@@ -86,6 +86,19 @@ data class SharedAetherExtensionError(
     val message: String,
 )
 
+data class SharedAetherExtensionSlashCommand(
+    val id: String,
+    val extensionId: String,
+    val extensionName: String,
+    val name: String,
+    val command: String,
+    val description: String,
+    val argumentHint: String,
+    val order: Int,
+    val action: String,
+    val args: JsonObject,
+)
+
 data class SharedAetherExtensionSnapshot(
     val apiVersion: Int = 2,
     val version: Long = 0,
@@ -93,6 +106,7 @@ data class SharedAetherExtensionSnapshot(
     val surfaces: List<SharedAetherExtensionSurface> = emptyList(),
     val components: List<SharedAetherExtensionComponent> = emptyList(),
     val composerMenuItems: List<SharedAetherExtensionComposerMenuItem> = emptyList(),
+    val slashCommands: List<SharedAetherExtensionSlashCommand> = emptyList(),
     val settings: List<SharedAetherExtensionSettingsPage> = emptyList(),
     val messageTypes: List<SharedAetherExtensionMessageType> = emptyList(),
     val customMessages: List<SharedAetherExtensionCustomMessage> = emptyList(),
@@ -248,6 +262,20 @@ internal fun parseSharedAetherExtensionSnapshot(
                 action = item.string("action"),
                 args = item["args"] as? JsonObject ?: JsonObject(emptyMap()),
                 selected = item.boolean("selected"),
+            )
+        },
+        slashCommands = json.objects("slash_commands").map { item ->
+            SharedAetherExtensionSlashCommand(
+                id = item.string("id"),
+                extensionId = item.string("extension_id"),
+                extensionName = item.string("extension_name"),
+                name = item.string("name"),
+                command = item.string("command"),
+                description = item.string("description"),
+                argumentHint = item.string("argument_hint"),
+                order = item.int("order") ?: 0,
+                action = item.string("action"),
+                args = item["args"] as? JsonObject ?: JsonObject(emptyMap()),
             )
         },
         settings = json.objects("settings").map { item ->

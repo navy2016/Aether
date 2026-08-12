@@ -73,6 +73,18 @@ class AetherAppExtensionsTest {
                       "tree":{"type":"text","text":"First"}
                     }
                   ],
+                  "slash_commands":[{
+                    "id":"demo:1:review",
+                    "extension_id":"demo:1",
+                    "extension_name":"Demo",
+                    "name":"review",
+                    "command":"/review",
+                    "description":"Review changes",
+                    "argument_hint":"[focus]",
+                    "order":2,
+                    "action":"review",
+                    "args":{"mode":"strict"}
+                  }],
                   "event_names":["before_send"],
                   "errors":[]
                 }
@@ -90,6 +102,8 @@ class AetherAppExtensionsTest {
             "wrap",
             snapshot.componentsAt("chat.composer.actionTray").single().mode,
         )
+        assertEquals("/review", snapshot.slashCommands.single().command)
+        assertEquals("strict", snapshot.slashCommands.single().args.optString("mode"))
         assertTrue("before_send" in snapshot.eventNames)
     }
 

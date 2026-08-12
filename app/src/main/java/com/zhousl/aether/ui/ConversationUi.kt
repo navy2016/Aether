@@ -156,6 +156,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.core.graphics.PathParser
 import com.zhousl.aether.R
+import com.zhousl.aether.data.AetherAppExtensionSlashCommand
 import com.zhousl.aether.data.InstalledSkill
 import com.zhousl.aether.data.AppLanguage
 import com.zhousl.aether.data.AgentModeDisplayState
@@ -314,6 +315,7 @@ fun ConversationScreen(
     reasoningEffort: String,
     thinkingLevelsByProviderModel: Map<String, List<String>>,
     thinkingLevelClampsByProviderModel: Map<String, Map<String, String>>,
+    extensionSlashCommands: List<AetherAppExtensionSlashCommand>,
     availableSkills: List<InstalledSkill>,
     availableMcpServers: List<McpServerConfig>,
     selectedSkillIds: List<String>,
@@ -333,6 +335,7 @@ fun ConversationScreen(
     onModelSelected: (String, (Boolean) -> Unit) -> Unit,
     onModelSelectorOpened: () -> Unit,
     onReasoningEffortSelected: (String) -> Unit,
+    onExtensionSlashCommand: (AetherAppExtensionSlashCommand, String, String) -> Unit,
     onRemoveDraftAttachment: (String) -> Unit,
     onSetSkillSelected: (String, Boolean) -> Unit,
     onSetMcpServerSelected: (String, Boolean) -> Unit,
@@ -755,6 +758,12 @@ fun ConversationScreen(
                 onBodyHeightChanged = { composerBodyHeightPx = it },
                 value = inputValue,
                 attachments = draftAttachments,
+                extensionSlashCommands = extensionSlashCommands,
+                reasoningEffort = reasoningEffort,
+                selectedModelKey = selectedModelKey,
+                modelOptions = modelOptions,
+                thinkingLevelsByProviderModel = thinkingLevelsByProviderModel,
+                thinkingLevelClampsByProviderModel = thinkingLevelClampsByProviderModel,
                 availableSkills = availableSkills,
                 availableMcpServers = availableMcpServers,
                 selectedSkillIds = selectedSkillIds,
@@ -770,6 +779,8 @@ fun ConversationScreen(
                 showTermuxSetupNotice = showTermuxSetupNotice,
                 compactSuggestionText = compactSuggestionText,
                 onValueChange = onInputChanged,
+                onReasoningEffortSelected = onReasoningEffortSelected,
+                onExtensionSlashCommand = onExtensionSlashCommand,
                 onRemoveAttachment = onRemoveDraftAttachment,
                 onSetSkillSelected = onSetSkillSelected,
                 onSetMcpServerSelected = onSetMcpServerSelected,
@@ -2121,6 +2132,12 @@ private fun ConversationComposerOverlay(
     onBodyHeightChanged: (Int) -> Unit,
     value: String,
     attachments: List<ChatAttachment>,
+    extensionSlashCommands: List<AetherAppExtensionSlashCommand>,
+    reasoningEffort: String,
+    selectedModelKey: String,
+    modelOptions: List<ProviderModelOption>,
+    thinkingLevelsByProviderModel: Map<String, List<String>>,
+    thinkingLevelClampsByProviderModel: Map<String, Map<String, String>>,
     availableSkills: List<InstalledSkill>,
     availableMcpServers: List<McpServerConfig>,
     selectedSkillIds: List<String>,
@@ -2136,6 +2153,8 @@ private fun ConversationComposerOverlay(
     showTermuxSetupNotice: Boolean,
     compactSuggestionText: String,
     onValueChange: (String) -> Unit,
+    onReasoningEffortSelected: (String) -> Unit,
+    onExtensionSlashCommand: (AetherAppExtensionSlashCommand, String, String) -> Unit,
     onRemoveAttachment: (String) -> Unit,
     onSetSkillSelected: (String, Boolean) -> Unit,
     onSetMcpServerSelected: (String, Boolean) -> Unit,
@@ -2187,6 +2206,12 @@ private fun ConversationComposerOverlay(
                     conversationStateKey = conversationStateKey,
                     value = value,
                     attachments = attachments,
+                    extensionSlashCommands = extensionSlashCommands,
+                    reasoningEffort = reasoningEffort,
+                    selectedModelKey = selectedModelKey,
+                    modelOptions = modelOptions,
+                    thinkingLevelsByProviderModel = thinkingLevelsByProviderModel,
+                    thinkingLevelClampsByProviderModel = thinkingLevelClampsByProviderModel,
                     availableSkills = availableSkills,
                     availableMcpServers = availableMcpServers,
                     selectedSkillIds = selectedSkillIds,
@@ -2202,6 +2227,8 @@ private fun ConversationComposerOverlay(
                     showTermuxSetupNotice = showTermuxSetupNotice,
                     compactSuggestionText = compactSuggestionText,
                     onValueChange = onValueChange,
+                    onReasoningEffortSelected = onReasoningEffortSelected,
+                    onExtensionSlashCommand = onExtensionSlashCommand,
                     onRemoveAttachment = onRemoveAttachment,
                     onSetSkillSelected = onSetSkillSelected,
                     onSetMcpServerSelected = onSetMcpServerSelected,
@@ -2222,7 +2249,7 @@ private fun ConversationComposerOverlay(
                     onFocusChanged = onFocusChanged,
                     onSend = onSend,
                     onQueueFollowUp = onQueueFollowUp,
-                        onSteerFollowUp = onSteerFollowUp,
+                    onSteerFollowUp = onSteerFollowUp,
                     )
                 }
             }
@@ -2236,6 +2263,12 @@ private fun ConversationComposerBar(
     conversationStateKey: String,
     value: String,
     attachments: List<ChatAttachment>,
+    extensionSlashCommands: List<AetherAppExtensionSlashCommand>,
+    reasoningEffort: String,
+    selectedModelKey: String,
+    modelOptions: List<ProviderModelOption>,
+    thinkingLevelsByProviderModel: Map<String, List<String>>,
+    thinkingLevelClampsByProviderModel: Map<String, Map<String, String>>,
     availableSkills: List<InstalledSkill>,
     availableMcpServers: List<McpServerConfig>,
     selectedSkillIds: List<String>,
@@ -2251,6 +2284,8 @@ private fun ConversationComposerBar(
     showTermuxSetupNotice: Boolean,
     compactSuggestionText: String,
     onValueChange: (String) -> Unit,
+    onReasoningEffortSelected: (String) -> Unit,
+    onExtensionSlashCommand: (AetherAppExtensionSlashCommand, String, String) -> Unit,
     onRemoveAttachment: (String) -> Unit,
     onSetSkillSelected: (String, Boolean) -> Unit,
     onSetMcpServerSelected: (String, Boolean) -> Unit,
@@ -2328,9 +2363,34 @@ private fun ConversationComposerBar(
         else -> stringResource(R.string.chat_ask_aether)
     }
     val hasDraft = value.isNotBlank() || attachments.isNotEmpty()
-    val slashSuggestions = remember(fieldValue.text) {
-        slashCommandSuggestions(fieldValue.text)
+    val availableSlashCommands = remember(extensionSlashCommands) {
+        PiBuiltinSlashCommands + extensionSlashCommands.map { command ->
+            SlashCommandSuggestion(
+                command = command.command,
+                description = command.description,
+                argumentHint = command.argumentHint,
+                extensionId = command.extensionId,
+                action = command.action,
+                icon = SlashCommandIcon.Extension,
+            )
+        }
     }
+    val slashSuggestions = remember(fieldValue.text, availableSlashCommands) {
+        slashCommandSuggestions(
+            input = fieldValue.text,
+            extensionCommands = availableSlashCommands.filter { it.icon == SlashCommandIcon.Extension },
+        )
+    }
+    val selectedModel = modelOptions.firstOrNull { it.key == selectedModelKey }
+    val currentThinkingCatalogKey = selectedModel?.let {
+        thinkingCatalogKey(it.piProviderId, it.modelId)
+    }
+    val currentSupportedThinkingLevels = currentThinkingCatalogKey
+        ?.let(thinkingLevelsByProviderModel::get)
+        .orEmpty()
+    val currentThinkingLevelClamps = currentThinkingCatalogKey
+        ?.let(thinkingLevelClampsByProviderModel::get)
+        .orEmpty()
     fun applySlashSuggestion(command: String) {
         val typedLength = fieldValue.text.drop(1).takeWhile { !it.isWhitespace() }.length
         val replaceEnd = (1 + typedLength).coerceAtMost(fieldValue.text.length)
@@ -2632,6 +2692,32 @@ private fun ConversationComposerBar(
                                     isSending = isSending,
                                     onClick = {
                                         if (!hasDraft || !canSendDraft) return@ComposerSubmitButton
+                                        if (!isSending && attachments.isEmpty()) {
+                                            findSlashCommand(
+                                                input = fieldValue.text,
+                                                commands = availableSlashCommands,
+                                            )?.let { (suggestion, parsed) ->
+                                                if (suggestion.command.equals("/thinking", ignoreCase = true)) {
+                                                    onReasoningEffortSelected(
+                                                        nextThinkingLevel(
+                                                            current = reasoningEffort,
+                                                            supportedLevels = currentSupportedThinkingLevels,
+                                                            clamps = currentThinkingLevelClamps,
+                                                        )
+                                                    )
+                                                    onValueChange("")
+                                                    return@ComposerSubmitButton
+                                                }
+                                                extensionSlashCommands.firstOrNull {
+                                                    it.extensionId == suggestion.extensionId &&
+                                                        it.command.equals(suggestion.command, ignoreCase = true)
+                                                }?.let { command ->
+                                                    onExtensionSlashCommand(command, parsed.args, parsed.raw)
+                                                    onValueChange("")
+                                                    return@ComposerSubmitButton
+                                                }
+                                            }
+                                        }
                                         if (isSending) {
                                             followUpMenuExpanded = true
                                         } else {

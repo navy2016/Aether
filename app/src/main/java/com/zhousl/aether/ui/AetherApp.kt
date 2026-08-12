@@ -318,6 +318,9 @@ fun AetherApp(
                             uiState = uiState,
                             language = effectiveLanguage,
                             nativeModState = nativeModState,
+                            extensionManager = extensionManager,
+                            extensionState = extensionState,
+                            extensionContext = extensionContext,
                             onNotificationPermissionRequested = onNotificationPermissionRequested,
                             drawerOpenedEventRegistered =
                                 "drawer.opened" in extensionState.snapshot.eventNames,
@@ -410,6 +413,9 @@ private fun AetherAppContent(
     uiState: AetherUiState,
     language: AppLanguage,
     nativeModState: AetherNativeModState,
+    extensionManager: com.zhousl.aether.data.AetherAppExtensionManager,
+    extensionState: com.zhousl.aether.data.AetherAppExtensionState,
+    extensionContext: JSONObject,
     onNotificationPermissionRequested: () -> Unit,
     drawerOpenedEventRegistered: Boolean,
     onDrawerOpened: () -> Unit,
@@ -885,6 +891,7 @@ private fun AetherAppContent(
                     reasoningEffort = uiState.settings.reasoningEffort,
                     thinkingLevelsByProviderModel = uiState.thinkingLevelsByProviderModel,
                     thinkingLevelClampsByProviderModel = uiState.thinkingLevelClampsByProviderModel,
+                    extensionSlashCommands = extensionState.snapshot.slashCommands,
                     availableSkills = uiState.installedSkills.filter { it.isEnabled },
                     availableMcpServers = uiState.mcpServers.filter { it.isEnabled },
                     selectedSkillIds = selectedSkillIds,
@@ -909,6 +916,20 @@ private fun AetherAppContent(
                     onModelSelected = viewModel::setCurrentChatModelSelectionAndResolveThinkingLevels,
                     onModelSelectorOpened = viewModel::refreshCurrentChatThinkingLevels,
                     onReasoningEffortSelected = viewModel::setReasoningEffort,
+                    onExtensionSlashCommand = { command, args, raw ->
+                        scope.launch {
+                            extensionManager.invokeAction(
+                                extensionId = command.extensionId,
+                                action = command.action,
+                                args = JSONObject(command.args.toString())
+                                    .put("command", command.command)
+                                    .put("name", command.name)
+                                    .put("args", args)
+                                    .put("raw", raw),
+                                context = extensionContext,
+                            )
+                        }
+                    },
                     onRemoveDraftAttachment = viewModel::removeDraftAttachment,
                     onSetSkillSelected = viewModel::setComposerSkillSelected,
                     onSetMcpServerSelected = viewModel::setComposerMcpServerSelected,

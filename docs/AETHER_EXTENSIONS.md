@@ -4,7 +4,8 @@ Aether follows Pi Coding Agent's trusted-code extension model, but adds an
 Android-specific Mod Kernel. One package can contain any combination of:
 
 - `pi.extensions`: Pi-compatible Agent tools, commands, hooks, and logic.
-- `aether.extensions`: hot-reloadable TypeScript/JavaScript UI and app logic.
+- `aether.extensions`: hot-reloadable TypeScript/JavaScript UI, app logic,
+  composer entries, and slash commands.
 - `aether.native`: restart-loaded Kotlin/DEX code with direct Android and
   Compose access.
 
@@ -111,6 +112,7 @@ interface AetherExtensionAPI {
   registerComponent(target: string, definition: ComponentDefinition): () => void;
   registerSettings(definition: SettingsDefinition): () => void;
   registerComposerMenuItem(definition: ComposerMenuItemDefinition): () => void;
+  registerSlashCommand(definition: SlashCommandDefinition): () => void;
   registerMessageType(definition: MessageTypeDefinition): () => void;
   registerAction(id: string, handler: ActionHandler): () => void;
   on(event: string, handler: EventHandler): () => void;
@@ -169,8 +171,53 @@ export const activateAether = defineAetherExtension((aether) => {
   aether.registerAction("insert", () =>
     aether.state.patch("draft_input", "Explain this repository.")
   );
+  aether.registerSlashCommand({
+    name: "explain",
+    description: "Insert an explanation prompt",
+    action: "insert",
+  });
 });
 ```
+
+## Slash commands
+
+- Built-in `/compact` compacts the current Pi AgentSession.
+- Built-in `/thinking` cycles `off → low → medium → high → xhigh` and updates
+  an already-created idle Pi AgentSession immediately.
+- Script Mods can add composer commands with `registerSlashCommand()`.
+- Exact extension command matches invoke their registered action with the raw
+  command and parsed argument string.
+
+`registerSlashCommand()` adds a command to Aether's composer suggestion list
+and routes exact submitted matches to an extension action instead of sending
+them to the model. The action payload includes `command`, `name`, `args`, and
+`raw`. Names may be written with or without a leading slash and cannot contain
+whitespace.
+
+```ts
+aether.registerSlashCommand({
+  name: "review",
+  description: "Insert a review prompt",
+  argumentHint: "[focus]",
+  action: "review",
+});
+
+aether.registerAction("review", ({ args }) =>
+  aether.state.patch(
+    "draft_input",
+    `Review the current changes${args ? ` with focus on ${args}` : ""}.`,
+  )
+);
+```
+
+Typing `/rev` shows the extension suggestion. Submitting `/review security`
+invokes `review` with `args: "security"`. The built-in `/compact` and
+`/thinking` commands remain owned by Aether core.
+
+`registerCommand()` is an alias for `registerSlashCommand()` in the Aether
+Script API. It is separate from Pi-compatible `pi.registerCommand()`, whose
+commands are also exposed by Aether's composer when a Pi AgentSession is
+active.
 
 ## UI surfaces
 

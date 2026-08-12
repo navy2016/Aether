@@ -17,6 +17,7 @@ import type {
   AetherJsonObject,
   AetherSettingsDefinition,
   AetherComposerMenuItemDefinition,
+  AetherSlashCommandDefinition,
   AetherMessageTypeDefinition,
   AetherRenderContext,
   AetherSurfaceDefinition,
@@ -33,6 +34,7 @@ export type {
   AetherJsonObject,
   AetherSettingsDefinition,
   AetherComposerMenuItemDefinition,
+  AetherSlashCommandDefinition,
   AetherMessageTypeDefinition,
   AetherRenderContext,
   AetherSurfaceDefinition,
@@ -96,6 +98,12 @@ interface RegisteredComposerMenuItem {
   definition: AetherComposerMenuItemDefinition;
 }
 
+interface RegisteredSlashCommand {
+  id: string;
+  extension: LoadedAetherExtension;
+  definition: AetherSlashCommandDefinition;
+}
+
 interface RegisteredMessageType {
   id: string;
   extension: LoadedAetherExtension;
@@ -136,6 +144,7 @@ interface AetherRuntimeState {
   components: Map<string, RegisteredComponent>;
   settings: Map<string, RegisteredSettings>;
   composerMenuItems: Map<string, RegisteredComposerMenuItem>;
+  slashCommands: Map<string, RegisteredSlashCommand>;
   messageTypes: Map<string, RegisteredMessageType>;
   actions: Map<string, RegisteredAction>;
   events: Map<string, RegisteredEventHandler[]>;
@@ -200,6 +209,7 @@ function createEmptyRuntime(cwd: string): AetherRuntimeState {
     components: new Map(),
     settings: new Map(),
     composerMenuItems: new Map(),
+    slashCommands: new Map(),
     messageTypes: new Map(),
     actions: new Map(),
     events: new Map(),
@@ -845,6 +855,29 @@ function createApi(
     registerComposerMenu(definition) {
       return this.registerComposerMenuItem(definition);
     },
+    registerSlashCommand(definition) {
+      const name = definition.name.trim().replace(/^\/+/, "");
+      if (!name) throw new Error("Aether slash commands require a name.");
+      if (/\s/.test(name)) throw new Error("Aether slash command names cannot contain whitespace.");
+      const id = scopedId(extension.id, name.toLowerCase());
+      runtimeState.slashCommands.set(id, {
+        id,
+        extension,
+        definition: {
+          ...cloneJson(definition),
+          name,
+          description: definition.description?.trim() ?? "",
+          argumentHint: definition.argumentHint?.trim() ?? "",
+        },
+      });
+      invalidate();
+      return () => {
+        if (runtimeState.slashCommands.delete(id)) invalidate();
+      };
+    },
+    registerCommand(definition) {
+      return this.registerSlashCommand(definition);
+    },
     registerMessageType(definition) {
       const type = definition.type.trim();
       if (!type) throw new Error("Aether message types require a type.");
@@ -1190,6 +1223,23 @@ async function aetherAppExtensionSnapshotUnlocked(
       args: cloneJson(item.definition.args ?? {}),
       selected: item.definition.selected === true,
     }));
+  const slashCommands = [...runtime.slashCommands.values()]
+    .sort((left, right) =>
+      (Number(left.definition.order) || 0) - (Number(right.definition.order) || 0) ||
+      left.id.localeCompare(right.id)
+    )
+    .map((item) => ({
+      id: item.id,
+      extension_id: item.extension.id,
+      extension_name: item.extension.name,
+      name: item.definition.name,
+      command: `/${item.definition.name}`,
+      description: item.definition.description ?? "",
+      argument_hint: item.definition.argumentHint ?? "",
+      order: Number.isFinite(item.definition.order) ? Number(item.definition.order) : 0,
+      action: item.definition.action ?? item.definition.name,
+      args: cloneJson(item.definition.args ?? {}),
+    }));
   const settings = [...runtime.settings.values()]
     .sort((left, right) =>
       (Number(left.definition.order) || 0) - (Number(right.definition.order) || 0) ||
@@ -1254,6 +1304,7 @@ async function aetherAppExtensionSnapshotUnlocked(
     components,
     settings,
     composer_menu_items: composerMenuItems,
+    slash_commands: slashCommands,
     message_types: messageTypes,
     custom_messages: customMessages,
     event_names: [...runtime.events.keys()].sort(),
